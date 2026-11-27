@@ -19,12 +19,25 @@ An original offline stenography trainer for the **LilyGO T-Embed CC1101** (ESP32
 
 This is a trainer, not a full Plover replacement. Dictionary entries with macros, formatting commands, non-ASCII content, punctuation-only translations and numeric outlines are omitted. Free writing is limited to plain-text translations and a rolling 128-stroke history. Drills are original practice material grouped by skills rather than a reproduction of the Lapwing textbook or exact chapter numbering. WPM counts completed translated words (not raw key drills).
 
+## Installing with Launcher firmware
+
+If the T-Embed already runs [Launcher](https://github.com/bmorcelli/Launcher), use the application-only file `steno-fw-launcher.bin` from the successful **steno-fw-launcher** Actions artifact. It does not contain a bootloader or partition table.
+
+1. Back up any installed apps and data and confirm the board is T-Embed CC1101. Make sure Launcher has enough space for the app image; do not remove other apps or resize partitions without a backup.
+2. Extract the ZIP and verify the SHA256SUMS file.
+3. Copy the app binary to your FAT32 microSD card, or upload it through Launcher's own WebUI (WUI).
+4. Select the binary in Launcher's SD file menu and choose Install. Follow any prompts. Do not use an external full-flash tool; it would overwrite Launcher.
+5. Verify the app starts, check Diagnostics for PMU status, and switch to DEMO mode to test lessons. The Polyglot must remain disconnected directly from the LilyGO.
+6. To return to Launcher, use its normal power-on/restart boot screen and select the Launcher menu according to the installed Launcher version. Enable Boot to Launcher beforehand if available.
+
+This app-only image is compiled for the existing ESP32-S3 bootloader. It has not yet been tested on a physical Launcher installation. See the [Launcher binary installation guide](https://github.com/bmorcelli/Launcher/wiki/Obtaining-binaries-to-launch) for its supported install methods.
+
 ## Safe first test
 
 Use only the serial-device build on the normal USB port. **Do not connect Polyglot directly to LilyGO, force VBUS, modify the board or use an improvised powered cable.** The board's BQ25896 contains a boost function, but the documented USB-C CC sink resistors do not establish a compliant source role. Keyboard current consumption and the complete host-side power path have not been validated. The firmware never enables boost; it verifies that boost is off and caps the charger current at no more than 576 mA, without enabling charging or changing the charger safety timer, temperature protection or target voltage. It refreshes the chip watchdog every five seconds. This is a software safeguard, not a substitute for hardware validation. A PMU error stops practice and displays an unplug/stop warning; discontinue testing if this occurs.
 
 1. Confirm the exact board is **T-Embed CC1101**, not the older T-Embed. Back up current flash and obtain the official recovery firmware before flashing. Have supervision for the first board test; do not charge unattended using an unvalidated build.
-2. Use the [Actions](https://github.com/CloudWaddie/SigmaTracker/actions) tab to find a **successful** Build steno-fw run. Download the serial-device artifact, unzip it, and verify the SHA256 against SHA256SUMS. If no successful run exists, do not treat the source as ready to flash.
+2. Use the [Actions](https://github.com/CloudWaddie/steno-fw/actions) tab to find a **successful** Build steno-fw run. Download the serial-device artifact, unzip it, and verify the SHA256 against SHA256SUMS. If no successful run exists, do not treat the source as ready to flash.
 3. With the Polyglot disconnected, use Espressif's normal ESP32-S3 flashing procedure on an authorized computer. The merged serial-device binary starts at address `0x0`. Flashing changes the bootloader/partition table and app; restore the saved flash if needed.
 4. First boot on the LilyGO: verify the screen, encoder, menu and PMU check. In **Diagnostics**, verify the dictionary count is nonzero and PMU check is OK.
 5. In the home menu, select **Switch input mode**; DEMO appears in the top right. Try a lesson. Click the knob for the expected stroke, turn for an intentionally wrong demo stroke, and hold to go back. Demo attempts do not save.
