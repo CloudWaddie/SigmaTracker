@@ -44,7 +44,11 @@ jobs:
               0x10000 build/steno_fw.bin
             cp build/flash_args dist/
             cp data/LAPWING-LICENSE.txt dist/
-            sha256sum dist/steno-fw-serial-device.bin > dist/SHA256SUMS
+            mkdir -p dist-launcher
+            cp build/steno_fw.bin dist-launcher/steno-fw-launcher.bin
+            cp data/LAPWING-LICENSE.txt dist-launcher/
+            (cd dist-launcher && sha256sum steno-fw-launcher.bin > SHA256SUMS)
+            (cd dist && sha256sum steno-fw-serial-device.bin > SHA256SUMS)
           fi
       - name: Upload serial-device firmware
         if: matrix.mode == 'serial-device'
@@ -52,4 +56,11 @@ jobs:
         with:
           name: steno-fw-serial-device
           path: dist/
+          if-no-files-found: error
+      - name: Upload Launcher app binary
+        if: matrix.mode == 'serial-device'
+        uses: actions/upload-artifact@v4
+        with:
+          name: steno-fw-launcher
+          path: dist-launcher/
           if-no-files-found: error
