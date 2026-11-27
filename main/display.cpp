@@ -9,7 +9,7 @@
 #include <cctype>
 
 namespace {
-constexpr gpio_num_t DC=GPIO_NUM_16, BL=GPIO_NUM_21;
+constexpr gpio_num_t DC=GPIO_NUM_16, BL=GPIO_NUM_21, CS=GPIO_NUM_41;
 constexpr unsigned STRIPE=8;
 const uint8_t letters[26][7]={
  {14,17,17,31,17,17,17},{30,17,17,30,17,17,30},{14,17,16,16,16,17,14},
@@ -74,7 +74,10 @@ bool Display::send(bool data,const void *buf,unsigned len){
     return spi_device_polling_transmit(static_cast<spi_device_handle_t>(spi_),&t)==ESP_OK;
 }
 bool Display::command(uint8_t cmd,const uint8_t *data,unsigned n){
-    return send(false,&cmd,1)&&(!n||send(true,data,n));
+    gpio_set_level(CS,0);
+    bool ok=send(false,&cmd,1)&&(!n||send(true,data,n));
+    gpio_set_level(CS,1);
+    return ok;
 }
 bool Display::init(){
     pixels_=static_cast<uint16_t*>(heap_caps_malloc(W*H*2,MALLOC_CAP_SPIRAM|MALLOC_CAP_8BIT));
@@ -85,23 +88,41 @@ bool Display::init(){
     for(auto p:{GPIO_NUM_12,GPIO_NUM_13,GPIO_NUM_41,DC,BL}){
         gpio_reset_pin(p); gpio_set_direction(p,GPIO_MODE_OUTPUT); gpio_set_level(p,p==BL?0:1);
     }
-    spi_bus_config_t bus{}; bus.mosi_io_num=9;bus.miso_io_num=10;bus.sclk_io_num=11;
+    spi_bus_config_t bus{}; bus.mosi_io_num=9;bus.miso_io_num=-1;bus.sclk_io_num=11;
     bus.quadwp_io_num=-1;bus.quadhd_io_num=-1;bus.data4_io_num=-1;bus.data5_io_num=-1;
     bus.data6_io_num=-1;bus.data7_io_num=-1;bus.max_transfer_sz=W*STRIPE*2;
-    if(spi_bus_initialize(SPI2_HOST,&bus,SPI_DMA_CH_AUTO)!=ESP_OK) return false;
+    if(spi_bus_initialize(SPI3_HOST,&bus,SPI_DMA_CH_AUTO)!=ESP_OK) return false;
     spi_device_interface_config_t dev{};
-    dev.clock_speed_hz=20000000;dev.mode=0;dev.spics_io_num=41;dev.queue_size=1;
+    dev.clock_speed_hz=10000000;dev.mode=0;dev.spics_io_num=-1;dev.queue_size=1;
     spi_device_handle_t handle=nullptr;
-    if(spi_bus_add_device(SPI2_HOST,&dev,&handle)!=ESP_OK) return false;
+    if(spi_bus_add_device(SPI3_HOST,&dev,&handle)!=ESP_OK) return false;
     spi_=handle;
     if(!command(0x01)) return false;
     vTaskDelay(pdMS_TO_TICKS(150));
     if(!command(0x11)) return false;
     vTaskDelay(pdMS_TO_TICKS(120));
-    const uint8_t mad=0xA0,col=0x55;
-    if(!command(0x36,&mad,1)||!command(0x3A,&col,1)||!command(0x21)||
-       !command(0x13)||!command(0x29)) return false;
-    vTaskDelay(pdMS_TO_TICKS(20));
+    // ST7789 register settings from the T-Embed CC1101 panel configuration.
+    // Use the vendor's non-INIT_SEQUENCE_3 panel parameters, then rotate.
+    // Keep CS asserted across each command and its parameters.
+    struct Reg { uint8_t addr, len, data[14]; };
+    static constexpr Reg init[]={
+        {0x13,0,{}}, {0x36,1,{0xA0}}, {0xB6,2,{0x0A,0x82}},
+        {0xB0,2,{0x00,0xE0}}, {0x3A,1,{0x55}},
+        {0xB2,5,{0x0C,0x0C,0x00,0x33,0x33}},
+        {0xB7,1,{0x35}}, {0xBB,1,{0x28}}, {0xC0,1,{0x0C}},
+        {0xC2,2,{0x01,0xFF}}, {0xC3,1,{0x10}}, {0xC4,1,{0x20}},
+        {0xC6,1,{0x0F}}, {0xD0,2,{0xA4,0xA1}},
+        {0xE0,14,{0xD0,0x00,0x02,0x07,0x0A,0x28,0x32,0x44,0x42,0x06,0x0E,0x12,0x14,0x17}},
+        {0xE1,14,{0xD0,0x00,0x02,0x07,0x0A,0x28,0x31,0x54,0x47,0x0E,0x1C,0x17,0x1B,0x1E}},
+        {0x21,0,{}},
+    };
+    for(const auto &r:init){
+        if(!command(r.addr,r.data,r.len)) return false;
+        if(r.addr==0x3A) vTaskDelay(pdMS_TO_TICKS(10));
+    }
+    vTaskDelay(pdMS_TO_TICKS(120));
+    if(!command(0x29))return false;
+    vTaskDelay(pdMS_TO_TICKS(120));
     clear(0); if(!show()) return false;
     gpio_set_level(BL,1);
     return true;
@@ -139,13 +160,17 @@ void Display::wrapped(int x,int y,int width,int max_lines,const std::string &s,i
 bool Display::show(){
     if(!spi_||!pixels_) return false;
     const uint8_t xs[]={0,0,1,63},ys[]={0,35,0,204};
-    if(!command(0x2A,xs,4)||!command(0x2B,ys,4)||!command(0x2C)) return false;
+    if(!command(0x2A,xs,4)||!command(0x2B,ys,4)) return false;
+    const uint8_t ramwr=0x2C;
+    gpio_set_level(CS,0);
+    if(!send(false,&ramwr,1)){gpio_set_level(CS,1);return false;}
     for(int y=0;y<H;y+=STRIPE){
         unsigned count=W*std::min<int>(STRIPE,H-y);
         for(unsigned i=0;i<count;i++){
             auto v=pixels_[y*W+i]; dma_[2*i]=v>>8;dma_[2*i+1]=v&255;
         }
-        if(!send(true,dma_,count*2)) return false;
+        if(!send(true,dma_,count*2)){gpio_set_level(CS,1);return false;}
     }
+    gpio_set_level(CS,1);
     return true;
 }

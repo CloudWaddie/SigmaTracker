@@ -2,6 +2,10 @@
 #include <algorithm>
 #include <cstring>
 #include <limits>
+#ifdef ESP_PLATFORM
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#endif
 
 namespace steno {
 std::string Gemini::feed(uint8_t byte) {
@@ -39,6 +43,10 @@ bool Dictionary::load(const uint8_t *data, size_t size) {
     size_t start=8+size_t(n)*4;
     const char *prev=nullptr;
     for(unsigned i=0;i<n;i++) {
+#ifdef ESP_PLATFORM
+        // Large flash-resident dictionaries must not monopolize the CPU during startup.
+        if((i & 1023u)==0) vTaskDelay(1);
+#endif
         uint32_t off=u32(data+8+4*i);
         if(off>=size-start) return false;
         const char *p=reinterpret_cast<const char*>(data+start+off);
