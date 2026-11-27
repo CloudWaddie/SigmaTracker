@@ -34,7 +34,7 @@ steno::Dictionary dict;
 steno::Practice practice(content::drills,ndrills);
 steno::Writer writer(dict);
 nvs_handle_t storage=0;
-bool storage_ready=false, dirty=false, demo=false, hint=false, bad=false, review=false;
+bool storage_ready=false, dirty=false, demo=true, hint=false, bad=false, review=false;
 int selected=0, group=0;
 uint64_t last_save=0, last_frame=0, result_time=0;
 std::string last_stroke,feedback,writer_text;
@@ -73,6 +73,13 @@ void top(const std::string &title){
     screen.clear(bg);screen.rect(0,0,320,28,panel);
     screen.text(9,7,title,2,fg);
     screen.text(267,9,demo?"DEMO":"LIVE",1,demo?yellow:accent);
+}
+void startup(const std::string &stage){
+    top("STENO FW - STARTUP");
+    screen.wrapped(12,55,296,3,stage,2,fg);
+    screen.text(12,132,"DISPLAY FIX 1",1,accent);
+    screen.show();
+    vTaskDelay(pdMS_TO_TICKS(300));
 }
 void bottom(const std::string &s){
     screen.rect(0,151,320,19,panel);screen.text(8,157,s,1,muted);
@@ -212,17 +219,23 @@ extern "C" void app_main(){
     bool pmu=power::begin();
     if(!screen.init()){ESP_LOGE("steno","LCD initialization failed");return;}
     if(!pmu){render();return;}
+    startup("1/4 Power check passed");
+    startup("2/4 Checking Lapwing dictionary");
     if(!dict.load(dictionary_start,dictionary_end-dictionary_start)){
         top("DICTIONARY ERROR");screen.wrapped(10,50,300,3,"Dictionary failed integrity check.",2,red);screen.show();return;
     }
-    input::controls_begin();input::begin();load();render();
+    startup("3/4 Starting controls and input");
+    input::controls_begin();input::begin();
+    startup("4/4 Loading saved progress");
+    load();render();
     uint64_t last_tick=now_ms();
-    bool redraw=false;
+    bool redraw=false, power_warning=false;
     while(true){
         if(!power::healthy()){
-            if(now_ms()-last_frame>=150){render();last_frame=now_ms();}
+            if(!power_warning){render();power_warning=true;}
             vTaskDelay(pdMS_TO_TICKS(100));continue;
         }
+        if(power_warning){power_warning=false;redraw=true;}
         auto a=input::poll_controls();
         if(a!=Action::None){act(a);redraw=true;}
         auto s=input::receive();
