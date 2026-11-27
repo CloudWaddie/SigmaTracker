@@ -56,6 +56,7 @@ Requirements: ESP-IDF **v5.4.2**, Python 3, internet access for initial dependen
 
 ```sh
 bash tools/test.sh
+# Optional full-dictionary regression suite: bash tools/test.sh --full
 python3 tools/build_dictionary.py
 # Run inside an ESP-IDF v5.4.2 environment:
 idf.py set-target esp32s3
