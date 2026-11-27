@@ -1,0 +1,55 @@
+name: Build steno-fw
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  host-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash tools/test.sh
+  firmware:
+    needs: host-tests
+    strategy:
+      fail-fast: false
+      matrix:
+        mode: [serial-device, usb-host-experimental]
+    runs-on: ubuntu-latest
+    container:
+      image: espressif/idf:v5.4.2
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build pinned Lapwing dictionary
+        run: python3 tools/build_dictionary.py
+      - name: Compile firmware
+        run: |
+          source /opt/esp/idf/export.sh
+          if [ "${{ matrix.mode }}" = "usb-host-experimental" ]; then
+            idf.py -D 'SDKCONFIG_DEFAULTS=sdkconfig.defaults;sdkconfig.usb-host' set-target esp32s3
+          else
+            idf.py set-target esp32s3
+          fi
+          idf.py build
+          if [ "${{ matrix.mode }}" = "serial-device" ]; then
+            mkdir -p dist
+            esptool.py --chip esp32s3 merge_bin -o dist/steno-fw-serial-device.bin --flash_size 16MB --flash_mode dio \
+              0x0 build/bootloader/bootloader.bin \
+              0x8000 build/partition_table/partition-table.bin \
+              0x10000 build/steno_fw.bin
+            cp build/flash_args dist/
+            cp data/LAPWING-LICENSE.txt dist/
+            sha256sum dist/steno-fw-serial-device.bin > dist/SHA256SUMS
+          fi
+      - name: Upload serial-device firmware
+        if: matrix.mode == 'serial-device'
+        uses: actions/upload-artifact@v4
+        with:
+          name: steno-fw-serial-device
+          path: dist/
+          if-no-files-found: error

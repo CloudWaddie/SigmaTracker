@@ -1,0 +1,8 @@
+menu "Steno firmware"
+    config STENO_USB_HOST
+        bool "Experimental USB CDC host (externally verified interface only)"
+        default n
+        help
+            Disables USB serial device input. Does not source VBUS.
+            Requires a separately validated, compliant USB host power path.
+endmenu

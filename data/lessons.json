@@ -1,0 +1,8 @@
+[
+  {"name":"Left hand","raw":["S","T","K","P","W","H","R","TK","PW","HR","ST","KP","TKPW"]},
+  {"name":"Right hand","raw":["-F","-R","-P","-B","-L","-G","-T","-S","-D","-Z","-FR","-PB","-LG","-TS"]},
+  {"name":"Vowels and chords","raw":["A","O","E","U","AO","EU","AEU","AOEU","*","KAT","TAP","POT","PWED","TEPB"]},
+  {"name":"Short words","words":["cat","dog","bat","hat","sat","rat","pat","mat","tap","map","cap","gap","top","hot","pot","not","red","bed","fed","ten","pen","hen"]},
+  {"name":"Everyday briefs","words":["the","can","is","with","had","are","I","you","a","and","for","in","to","of","was","what","that","this","they","did","do","does"]},
+  {"name":"Longer outlines","words":["hello","world","practice","stroke","strokes","type","see","sea","say","might","bite","tight","store"]}
+]
