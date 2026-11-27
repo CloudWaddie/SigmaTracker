@@ -202,7 +202,7 @@ void act(Action a){
     else if(view==Screen::Writer){
         if(a==Action::Side){writer.clear();writer_text.clear();}
         if(a==Action::Select&&demo){
-            static unsigned i=0;const char *sample[]={"HEL","HRO","WORLT","*"};
+            static unsigned i=0;const char *sample[]={"KAT","TKOG","KAT","*"};
             stroke(sample[i++%4],true);
         }
     }

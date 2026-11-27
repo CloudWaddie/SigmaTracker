@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: bash tools/test.sh
+      - run: bash tools/test.sh --full
   firmware:
     needs: host-tests
     strategy:
