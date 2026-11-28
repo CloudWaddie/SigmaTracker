@@ -72,6 +72,10 @@ void host_task(void*) {
     while(true){
         cdc_acm_dev_hdl_t dev=nullptr;
         disconnected=false;
+        // Javelin's composite USB device: CDC control interface 3
+        // (confirmed on the Polyglot); the data interface is 4.
+        // Retain the original stock Polyglot VID/PID fallback.
+        if(cdc_acm_host_open(0x9000,0x400D,3,&cfg,&dev)!=ESP_OK) dev=nullptr;
         for(uint8_t i=0;i<6&&!dev;i++){
             if(cdc_acm_host_open(0x9000,0x0003,i,&cfg,&dev)!=ESP_OK) dev=nullptr;
         }
