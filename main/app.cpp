@@ -1,6 +1,7 @@
 #include "display.hpp"
 #include "input.hpp"
 #include "power.hpp"
+#include "sdkconfig.h"
 #include "core.hpp"
 #include "lessons_generated.hpp"
 #include "nvs_flash.h"
@@ -77,7 +78,11 @@ void top(const std::string &title){
 void startup(const std::string &stage){
     top("STENO FW - STARTUP");
     screen.wrapped(12,55,296,3,stage,2,fg);
+#if CONFIG_STENO_USB_HOST
+    screen.text(12,132,"HOST LAB - NO VBUS OUTPUT",1,yellow);
+#else
     screen.text(12,132,"DISPLAY FIX 1",1,accent);
+#endif
     screen.show();
     vTaskDelay(pdMS_TO_TICKS(300));
 }
@@ -150,7 +155,12 @@ void render(){
         screen.text(10,65,"DICT: "+num(dict.count()),2,fg);
         screen.text(10,89,"STROKE: "+(last_stroke.empty()?std::string("-"):last_stroke),2,fg);
         screen.text(10,117,"PMU CHECK OK / BOOST OFF",1,muted);
+#if CONFIG_STENO_USB_HOST
+        screen.text(10,135,"LAB ONLY - POWER UNVERIFIED",1,yellow);
+        bottom("UNPLUGGED TEST / HOLD: BACK");break;
+#else
         bottom("TEST A STROKE  HOLD: BACK");break;
+#endif
     }
     if(!screen.show()) ESP_LOGW("steno","LCD update failed");
 }

@@ -49,6 +49,13 @@ jobs:
             cp data/LAPWING-LICENSE.txt dist-launcher/
             (cd dist-launcher && sha256sum steno-fw-launcher.bin > SHA256SUMS)
             (cd dist && sha256sum steno-fw-serial-device.bin > SHA256SUMS)
+          else
+            grep -qx 'CONFIG_STENO_USB_HOST=y' sdkconfig
+            mkdir -p dist-host-lab
+            cp build/steno_fw.bin dist-host-lab/steno-fw-host-lab-launcher.bin
+            cp data/LAPWING-LICENSE.txt dist-host-lab/
+            cp docs/USB-HOST-LAB.md dist-host-lab/README.md
+            (cd dist-host-lab && sha256sum steno-fw-host-lab-launcher.bin > SHA256SUMS)
           fi
       - name: Upload serial-device firmware
         if: matrix.mode == 'serial-device'
@@ -63,4 +70,11 @@ jobs:
         with:
           name: steno-fw-launcher
           path: dist-launcher/
+          if-no-files-found: error
+      - name: Upload experimental Launcher host lab binary
+        if: matrix.mode == 'usb-host-experimental'
+        uses: actions/upload-artifact@v4
+        with:
+          name: steno-fw-host-lab-launcher
+          path: dist-host-lab/
           if-no-files-found: error

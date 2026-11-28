@@ -82,7 +82,9 @@ See the [official Polyglot firmware builder](https://lim.au/#/software/javelin-s
 
 Switch the on-device mode to LIVE. Open Diagnostics, press a chord and verify its outline. Then start a lesson. Press the side button for a hint; click to restart the current outline; hold knob to go back. Free writing uses the side button to clear.
 
-An independent direct USB host interface on the LilyGO remains a separate hardware-validation project. The optional host source is compiled only with `CONFIG_STENO_USB_HOST=y`; it doesn't power a keyboard and is not distributed as a flash artifact.
+## Experimental host laboratory build
+
+The `steno-fw-host-lab-launcher` Actions artifact is an app-only build with `CONFIG_STENO_USB_HOST=y`. It includes the Javelin Polyglot's CDC interface (VID:PID `9000:400D`, interface 3). It is for controlled laboratory evaluation only, **not a verified direct-connect configuration**. The PMU still keeps boost disabled; no USB-C source role or VBUS supply is implemented. Keep all USB peripherals disconnected while checking that the app starts, DEMO works and Diagnostics shows HOST WAITING. Do not connect a powered hub, OTG adapter or keyboard to the T-Embed's host port until the complete USB power path has been verified. See [USB host lab notes](docs/USB-HOST-LAB.md). Use the normal serial-device Launcher image for the working PC bridge.
 
 ## Build from source
 
